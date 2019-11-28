@@ -1,0 +1,233 @@
+Unit Data;
+
+Interface
+
+Uses GUI_Gen, Objects;
+
+Type TNombre = String[15];
+
+     PJugador = ^TJugador;
+     TJugador = Record
+        Nombre    : TNombre;
+        PApellido : TNombre;
+        SApellido : TNombre;
+        ANacim    : Word;
+        MNacim    : Byte;
+        DNacim    : Byte;
+        Foto      : Boolean;
+        PathFoto  : String;
+     End;
+
+     PNodo = ^TNodo;
+     TNodo = Record
+        Datos     : TJugador;
+        Anterior  : PNodo;
+        Siguiente : PNodo;
+     End;
+
+     TList = Object( TObject )
+        Public
+           Constructor Init;
+           Destructor Done; Virtual;
+
+           Procedure Carga( Path:String );
+           Procedure Guarda( Path:String );
+           Function  DameNumRegistros : Integer;
+           Function  DameJugador( Numero:Integer ) : PJugador;
+           Function  DamePrimero                   : PJugador;
+           Function  DameUltimo                    : PJugador;
+           Function  DameAnterior                  : PJugador;
+           Function  DameSiguiente                 : PJugador;
+           Procedure InsertaJugador( Jugador:TJugador );
+           Procedure BorraJugador( Numero:Integer );
+
+           Function ListaVacia : Boolean;
+
+        Private
+           Vacia         : Boolean;
+           Lista         : PNodo;
+           Primero       : PNodo;
+           Ultimo        : PNodo;
+           Actual        : PNodo;
+           NElems        : Integer;
+     End;
+
+Implementation
+
+Constructor TList.Init;
+Begin
+     if NOT( Inherited Init ) then Fail else begin
+        Lista:=NIL;
+        Primero:=NIL;
+        Ultimo:=NIL;
+        Actual:=NIL;
+        Vacia:=TRUE;
+        NElems:=0;
+     end;
+End;
+
+Destructor TList.Done;
+Begin
+     if NOT( Vacia ) then while NOT( Vacia ) do BorraJugador( 1 );
+End;
+
+Procedure TList.Carga( Path:String );
+Var f           : File of TJugador;
+    TempJugador : PJugador;
+Begin
+     if FileExists( Path ) then begin
+        Assign( f,Path );
+        Reset( f );
+        New( TempJugador );
+        while NOT( EOF(f) ) do begin
+           Read( f,TempJugador^ );
+           InsertaJugador( TempJugador^ );
+        end;
+        Vacia:=(NElems=0);
+        Close( f );
+     end;
+End;
+
+Procedure TList.Guarda( Path:String );
+Var f    : File of TJugador;
+    Temp : PNodo;
+Begin
+     Assign( f,Path );
+     Rewrite( f );
+     Temp:=Lista;
+     while NOT( Temp=NIL ) do begin
+        Write( f,Temp^.Datos );
+        Temp:=Temp^.Siguiente;
+     end;
+     Close( f );
+End;
+
+Function TList.DameNumRegistros : Integer;
+Begin
+     DameNumRegistros:=NElems;
+end;
+
+Function TList.DameJugador( Numero:Integer ) : PJugador;
+Var Temp   : PNodo;
+    i      : Integer;
+    Result : PJugador;
+Begin
+     Result:=NIL;
+     if NOT( ListaVacia ) then begin
+        Temp:=Lista;
+        i:=1;
+        if ( Numero<=NElems ) then begin
+           while NOT( i=Numero ) do begin
+              Temp:=Temp^.Siguiente;
+              Inc( i );
+           end;
+           New( Result );
+           Result:=@( Temp^.Datos );
+        end;
+     end;
+     DameJugador:=Result;
+End;
+
+Function TList.DamePrimero : PJugador;
+Begin
+     Actual:=Primero;
+     DamePrimero:=@( Actual^.Datos );
+End;
+
+Function TList.DameUltimo : PJugador;
+Begin
+     Actual:=Ultimo;
+     DameUltimo:=@( Actual^.Datos );
+End;
+
+Function TList.DameAnterior : PJugador;
+Var Result : PJugador;
+Begin
+     Result:=NIL;
+     if NOT( Actual^.Anterior=NIL ) then begin
+        Actual:=Actual^.Anterior;
+        Result:=@( Actual^.Datos );
+     end;
+     DameAnterior:=Result;
+End;
+
+Function TList.DameSiguiente : PJugador;
+Var Result : PJugador;
+Begin
+     Result:=NIL;
+     if NOT( Actual^.Siguiente=NIL ) then begin
+        Actual:=Actual^.Siguiente;
+        Result:=@( Actual^.Datos );
+     end;
+     DameSiguiente:=Result;
+End;
+
+Procedure TList.InsertaJugador( Jugador:TJugador );
+Var Temp : PNodo;
+Begin
+     if ListaVacia then begin
+        New( Temp );
+        with Temp^ do begin
+           Anterior:=NIL;
+           Siguiente:=NIL;
+           Datos:=Jugador;
+        end;
+        Lista:=Temp;
+        Actual:=Lista;
+        Primero:=Lista;
+        Ultimo:=Lista;
+        Vacia:=FALSE;
+     end else begin
+        Temp:=Ultimo;
+        New( Temp^.Siguiente );
+        with Temp^.Siguiente^ do begin
+           Anterior:=Temp;
+           Siguiente:=NIL;
+           Datos:=Jugador;
+        end;
+        Ultimo:=Temp^.Siguiente;
+     end;
+     Inc( NElems );
+End;
+
+Procedure TList.BorraJugador( Numero:Integer );
+Var Temp : PNodo;
+Begin
+     if NOT( DameJugador( Numero )=NIL ) then begin
+        if NElems=1 then begin
+           Dispose( Actual );
+           Lista:=NIL;
+           Primero:=NIL;
+           Ultimo:=NIL;
+        end else begin
+           if Actual=Primero then begin
+              Lista:=Actual^.Siguiente;
+              Actual^.Siguiente^.Anterior:=NIL;
+              Primero:=Actual^.Siguiente;
+              Dispose( Actual );
+              Actual:=Primero;
+           end else if Actual=Ultimo then begin
+              Actual^.Anterior^.Siguiente:=NIL;
+              Ultimo:=Actual^.Anterior;
+              Dispose( Actual );
+              Actual:=Ultimo;
+           end else begin
+              Actual^.Siguiente^.Anterior:=Actual^.Anterior;
+              Actual^.Anterior^.Siguiente:=Actual^.Siguiente;
+              Temp:=Actual^.Siguiente;
+              Dispose( Actual );
+              Actual:=Temp;
+           end;
+        end;
+        Dec( NElems );
+        Vacia:=(Nelems=0);
+     end;
+End;
+
+Function TList.ListaVacia : Boolean;
+Begin
+     ListaVacia:=Vacia;
+End;
+
+
+End.
