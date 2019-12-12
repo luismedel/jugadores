@@ -1,7 +1,7 @@
 # jugadores
 
-[🇪🇸](#español)
-[🇬🇧](#english)
+- [🇪🇸 Léeme](#español)
+- [🇬🇧 Readme](#english)
 
 ## Español
 Un viejo proyecto de mi primer año en la universidad, que he podido recuperar de un polvoriento disco de backup.
